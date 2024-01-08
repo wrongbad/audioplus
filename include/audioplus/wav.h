@@ -139,6 +139,4 @@ WavStream<Stream> wav(Stream && stream)
     return WavStream<Stream>(std::forward<Stream>(stream));
 }
 
-
-
 } // namespace audioplus
