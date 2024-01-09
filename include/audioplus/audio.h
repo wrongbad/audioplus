@@ -40,40 +40,8 @@ struct AudioSystem
     AudioDevice default_output();
 };
 
-
-template<class Obj>
-class AudioTraits
-{
-
-};
-
-
-
-
-// template<class Obj>
-// decltype(declval<Obj>().on_audio())
-// audio_cb(
-//     void const* inp, void * outp,
-//     unsigned long frames,
-//     PaStreamCallbackTimeInfo const* time,
-//     unsigned long status,
-//     void * vctx)
-// {
-//     auto * ctx = (AudioStream::Context *)vctx;
-//     // TODO time/status
-//     return ctx->on_audio(inp, outp, frames);
-// }
-
-
-
-// template<class Obj, >
-
-
 struct AudioStream
 {
-    // using AudioFunc = std::function<int(void const*, void*, int)>;
-    // using FinishFunc = std::function<void()>;
-
     struct Status
     {
         double input_hw_time = 0;
@@ -150,45 +118,8 @@ struct AudioStream
             output_dtype = get_audio_dtype<T2>();
         }
     };
-    // struct Context
-    // {
-    //     void * backend = nullptr;
-    //     AudioFunc on_audio;
-    //     FinishFunc on_finish;
-    //     RealtimeStatus realtime_status;
-
-    //     ~Context();
-    // };
 
     void * backend = nullptr;
-
-    // template<class Obj, class T1, class T2>
-    // AudioStream(StreamParams params, Obj * ctx, 
-    //     int(Obj::*fn)(T1 const*, T2*, int, Status))
-
-
-    // template<class Obj, class T1, class T2>
-    // AudioStream(StreamParams params, Obj * ctx, 
-    //     int(Obj::*fn)(T1 const*, T2*, int, Status))
-    // {
-    //     (void const* inp, void * outp,
-    //         unsigned long frames,
-    //         PaStreamCallbackTimeInfo const* time,
-    //         unsigned long status,
-    //         void * vctx)
-    // }
-
-    // template<class Obj, class T1, class T2>
-    // AudioStream(StreamParams params, Obj * ctx, int(Obj::*fn)(T1 const*, T2*, int))
-    // {
-        
-    // }
-
-    // template<class Obj>
-    // AudioStream(StreamParams params, Obj * ctx)
-    // :   AudioStream(params, ctx, &Obj::on_audio)
-    // {
-    // }
 
     AudioStream() {}
     AudioStream(AudioDevice device, Config cfg);
@@ -199,53 +130,10 @@ struct AudioStream
 
     bool running() const;
 
-    // void connect(AudioDevice device);
     void start();
     void stop();
     void abort();
     void close();
-
-    // // for use only inside audio callback
-    // RealtimeStatus const& realtime_status() const 
-    // {
-    //     return context->realtime_status; 
-    // }
-
-
-
-
-
-
-    // AudioStream & on_finish(FinishFunc fn)
-    // {
-    //     context->on_finish = std::move(fn);
-    //     return *this;
-    // }
-    // AudioStream & on_audio(AudioFunc fn)
-    // {
-    //     context->on_audio = std::move(fn);
-    //     return *this;
-    // }
-
-    // template<class Obj, class T1, class T2>
-    // AudioStream & on_audio(Obj * obj, int(Obj::*fn)(T1 const*, T2*, int))
-    // {
-    //     context->on_audio = [=] (void const* i, void * o, int n) {
-    //         return (obj->*fn)((T1 const*)i, (T2 *)o, n);
-    //     };
-    //     input_dtype = get_audio_dtype<T1>();
-    //     output_dtype = get_audio_dtype<T2>();
-    //     return *this;
-    // }
-    // uint32_t input_dtype = 0;
-    // uint32_t output_dtype = 0;
-
-
-// private:
-    // AudioStream can be copied / moved
-    // but Context is referenced by user-data pointer
-    // in the c API for for callbacks
-    // std::unique_ptr<Context> context {new Context()};
 };
 
 

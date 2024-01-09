@@ -123,66 +123,6 @@ AudioStream::AudioStream(AudioDevice device, Config cfg)
     ) );
 }
 
-
-
-// AudioStream::Context::~Context()
-// {
-//     // errors in destructors are tricky
-//     if(backend) { Pa_CloseStream(backend); }
-// }
-
-
-
-// static int audio_cb(
-//     void const* inp, void * outp,
-//     unsigned long frames,
-//     PaStreamCallbackTimeInfo const* time,
-//     PaStreamCallbackFlags status,
-//     void * vctx)
-// {
-//     auto * ctx = (AudioStream::Context *)vctx;
-//     // TODO time/status
-//     return ctx->on_audio(inp, outp, frames);
-// }
-
-// void AudioStream::connect(AudioDevice const& device)
-// {
-//     PaStreamParameters in_params;
-//     in_params.device = device.index;
-//     in_params.channelCount = input_channels;
-//     in_params.sampleFormat = input_dtype;
-//     in_params.suggestedLatency = 0;
-//     in_params.hostApiSpecificStreamInfo = nullptr;
-
-//     PaStreamParameters out_params;
-//     out_params.device = device.index;
-//     out_params.channelCount = output_channels;
-//     out_params.sampleFormat = output_dtype;
-//     out_params.suggestedLatency = 0;
-//     out_params.hostApiSpecificStreamInfo = nullptr;
-    
-//     PaStreamFlags flags = 0;
-//     if(!clip) { flags |= paClipOff; }
-//     if(!dither) { flags |= paDitherOff; }
-//     if(never_drop_input) { flags |= paNeverDropInput; }
-//     if(prime_output_with_callback) { flags |= paPrimeOutputBuffersUsingStreamCallback; }
-
-//     throw_pa_error( Pa_OpenStream(
-//         &context->backend,
-//         input_channels ? &in_params : nullptr,
-//         output_channels ? &out_params : nullptr,
-//         sample_rate ? sample_rate : device.default_sample_rate(),
-//         chunk_frames ? chunk_frames : 512, // TODO device default latency
-//         flags,
-//         audio_cb,
-//         (void *)context.get()
-//     ) );
-
-//     if(context->on_finish)
-//     {
-//         // TODO 
-//     }
-// }
 bool AudioStream::running() const
 {
     return Pa_IsStreamActive(backend) > 0;
