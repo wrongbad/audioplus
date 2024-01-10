@@ -12,7 +12,7 @@ static size_t read_callback(void * ctx, void * buf, size_t count)
     return stream->gcount();
 }
 
-static uint32_t seek_callback(void * ctx, int offset, drwav_seek_origin drway)
+static uint32_t iseek_callback(void * ctx, int offset, drwav_seek_origin drway)
 {
     std::istream * stream = (std::istream *)ctx;
     std::ios_base::seekdir way = 
@@ -29,21 +29,31 @@ static size_t write_callback(void * ctx, void const* buf, size_t count)
     return stream->fail() ? 0 : count;
 };
 
+static uint32_t oseek_callback(void * ctx, int offset, drwav_seek_origin drway)
+{
+    std::ostream * stream = (std::ostream *)ctx;
+    std::ios_base::seekdir way = 
+        (drway == drwav_seek_origin_start) ?
+        std::ios_base::beg : std::ios_base::cur;
+    stream->seekp(offset, way);
+    return stream->fail() ? 0 : 1;
+}
 
-struct WavImpl::WavIO
+
+struct WavStreamBase::Impl
 {
     drwav m_wav;
     WavHeader m_header;
 
-    WavIO(void * ctx) // read mode
+    Impl(void * ctx) // read mode
     {
         if(drwav_init_ex(
             &m_wav, 
             read_callback, 
-            seek_callback, 
+            iseek_callback, 
             nullptr, // onChunk
             ctx,
-            nullptr, // chunk_ctx
+            nullptr, // onChunk ctx
             DRWAV_SEQUENTIAL, 
             nullptr // allocator
         )) 
@@ -65,7 +75,7 @@ struct WavImpl::WavIO
         }
     }
 
-    WavIO(void * ctx, WavHeader header) // write mode
+    Impl(void * ctx, WavHeader header) // write mode
     {
         m_header = header;
 
@@ -94,39 +104,37 @@ struct WavImpl::WavIO
                 format.bitsPerSample = 16;
                 break;
             default:
-                break;
+                return;
         }
 
-        if( format.bitsPerSample != 0
-            && 
-            drwav_init_write_sequential(
-            &m_wav, 
-            &format,
-            header.frames * header.channels,
-            write_callback,
-            ctx,
-            nullptr
+        if(drwav_init_write(
+                &m_wav, 
+                &format,
+                write_callback,
+                oseek_callback,
+                ctx,
+                nullptr // allocator
         ))
         {
             m_header = header;
         }
     }
     bool valid() const { return m_header.channels != 0; }
-    ~WavIO() { drwav_uninit(&m_wav); }
+    ~Impl() { drwav_uninit(&m_wav); }
 };
 
-WavImpl::WavImpl()
+WavStreamBase::WavStreamBase()
 {   
 }
-WavImpl::~WavImpl()
+WavStreamBase::~WavStreamBase()
 {
 }
 
-static bool prep_read(WavImpl * w, std::istream & stream)
+static bool prep_read(WavStreamBase * w, std::istream & stream)
 {
     if(!w->m_impl)
     {
-        w->m_impl.reset(new WavImpl::WavIO((void *)&stream));
+        w->m_impl.reset(new WavStreamBase::Impl((void *)&stream));
     }
     if(!w->m_impl->valid())
     { 
@@ -136,39 +144,39 @@ static bool prep_read(WavImpl * w, std::istream & stream)
     return true;
 }
 
-int WavImpl::read(std::istream & stream, WavHeader * header)
+int WavStreamBase::read(std::istream & stream, WavHeader * header)
 {
     if(!prep_read(this, stream)) { return -1; }
     *header = m_impl->m_header;
     return 0;
 }
 
-int WavImpl::read(std::istream & stream, float * samples, int count)
+int WavStreamBase::read(std::istream & stream, float * samples, int count)
 {
     if(!prep_read(this, stream)) { return -1; }
     return drwav_read_pcm_frames_f32(&m_impl->m_wav, count, samples);
 }
 
-int WavImpl::read(std::istream & stream, int32_t * samples, int count)
+int WavStreamBase::read(std::istream & stream, int32_t * samples, int count)
 {
     if(!prep_read(this, stream)) { return -1; }
     return drwav_read_pcm_frames_s32(&m_impl->m_wav, count, samples);
 }
 
-int WavImpl::read(std::istream & stream, int16_t * samples, int count)
+int WavStreamBase::read(std::istream & stream, int16_t * samples, int count)
 {
     if(!prep_read(this, stream)) { return -1; }
     return drwav_read_pcm_frames_s16(&m_impl->m_wav, count, samples);
 }
 
-int WavImpl::write(std::ostream & stream, WavHeader const* header)
+int WavStreamBase::write(std::ostream & stream, WavHeader const* header)
 {
     if(m_impl)
     {
         error_message = "wav header already set";
         return -1;
     }
-    m_impl.reset(new WavIO((void *)&stream, *header));
+    m_impl.reset(new Impl((void *)&stream, *header));
     if(!m_impl->valid())
     {
         error_message = "wav header write failed";
@@ -177,7 +185,7 @@ int WavImpl::write(std::ostream & stream, WavHeader const* header)
     return 0;
 }
 
-static bool check_write(WavImpl * w, WavHeader::DType dtype)
+static bool check_write(WavStreamBase * w, WavHeader::DType dtype)
 {
     if(!w->m_impl || !w->m_impl->valid())
     { 
@@ -192,7 +200,7 @@ static bool check_write(WavImpl * w, WavHeader::DType dtype)
     return true;
 }
 
-int WavImpl::write(std::ostream & stream, float const* samples, int count)
+int WavStreamBase::write(std::ostream & stream, float const* samples, int count)
 {
     if(!check_write(this, WavHeader::Float32)) { return -1; }
     int frames = drwav_write_pcm_frames(&m_impl->m_wav,
@@ -200,7 +208,7 @@ int WavImpl::write(std::ostream & stream, float const* samples, int count)
     return frames * m_impl->m_wav.channels;
 }
 
-int WavImpl::write(std::ostream & stream, int32_t const* samples, int count)
+int WavStreamBase::write(std::ostream & stream, int32_t const* samples, int count)
 {
     if(!check_write(this, WavHeader::Int32)) { return -1; }
     int frames = drwav_write_pcm_frames(&m_impl->m_wav,
@@ -208,7 +216,7 @@ int WavImpl::write(std::ostream & stream, int32_t const* samples, int count)
     return frames * m_impl->m_wav.channels;
 }
 
-int WavImpl::write(std::ostream & stream, int16_t const* samples, int count)
+int WavStreamBase::write(std::ostream & stream, int16_t const* samples, int count)
 {
     if(!check_write(this, WavHeader::Int16)) { return -1; }
     int frames = drwav_write_pcm_frames(&m_impl->m_wav,
@@ -216,7 +224,7 @@ int WavImpl::write(std::ostream & stream, int16_t const* samples, int count)
     return frames * m_impl->m_wav.channels;
 }
 
-void WavImpl::finish()
+void WavStreamBase::finish()
 {
     // triggers dr_wav write completion
     // should be called before allowing the ostream to be destroyed

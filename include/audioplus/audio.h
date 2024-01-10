@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 struct PaStreamCallbackTimeInfo;
 
@@ -12,32 +11,11 @@ uint32_t get_audio_dtype();
 
 struct AudioDevice
 {
-    int const index;
-    char const* name() const;
+    int index;
+    std::string name() const;
     int max_input_channels() const;
     int max_output_channels() const;
     double default_sample_rate() const;
-};
-
-struct AudioSystem
-{
-    struct Iter
-    {
-        int index;
-        AudioDevice operator*() { return AudioDevice{index}; }
-        Iter & operator++() { index++; return *this; }
-        bool operator!=(Iter const& o) { return index!=o.index;}
-    };
-
-    AudioSystem();
-    ~AudioSystem();
-    void restart();
-
-    Iter begin();
-    Iter end();
-
-    AudioDevice default_input();
-    AudioDevice default_output();
 };
 
 struct AudioStream
@@ -52,6 +30,8 @@ struct AudioStream
         bool output_underflow = 0;
         bool output_overflow = 0;
         bool priming_output = 0;
+        Status() {}
+        Status(PaStreamCallbackTimeInfo const* pa_time, unsigned long pa_flags);
     };
 
     struct Config
@@ -64,6 +44,8 @@ struct AudioStream
         uint32_t output_dtype = 0;
         int input_channels = 0;
         int output_channels = 0;
+        AudioDevice input_device = {-1}; // -1 = default
+        AudioDevice output_device = {-1}; // -1 = default
         double sample_rate = 0;
         int chunk_frames = 0;
         bool clip = true;
@@ -85,17 +67,17 @@ struct AudioStream
 
       private:
         template<class Obj, class T1, class T2>
-        void on_audio(Obj * obj, int(Obj::*fn)(T1 const*, T2*, int, Status))
+        void on_audio(Obj * obj, int(Obj::*fn)(T1 const*, T2*, int, Status const&))
         {
             on_audio_ctx = obj;
             on_audio_fn = (void *) +[] (
                 void const* i, void * o,
                 unsigned long n,
-                PaStreamCallbackTimeInfo const* time,
-                unsigned long pa_status,
+                PaStreamCallbackTimeInfo const* pa_time,
+                unsigned long pa_flags,
                 void * pa_ctx)
             {
-                Status status; // TODO
+                Status status(pa_time, pa_flags);
                 return ((Obj *)pa_ctx)->on_audio((T1 const*)i, (T2 *)o, n, status);
             };
             input_dtype = get_audio_dtype<T1>();
@@ -122,19 +104,44 @@ struct AudioStream
     void * backend = nullptr;
 
     AudioStream() {}
-    AudioStream(AudioDevice device, Config cfg);
     AudioStream(AudioStream const&) = delete;
     AudioStream(AudioStream &&);
     AudioStream & operator=(AudioStream &&);
-    ~AudioStream();
+    ~AudioStream() { close(std::nothrow_t{}); }
 
+    bool is_open() const;
     bool running() const;
-
     void start();
     void stop();
     void abort();
     void close();
+    int close(std::nothrow_t); // return < 0 if error
+    double clock_time();
 };
 
+struct AudioSession
+{
+    struct Iter
+    {
+        int index;
+        AudioDevice operator*() { return AudioDevice{index}; }
+        Iter & operator++() { index++; return *this; }
+        bool operator!=(Iter const& o) { return index!=o.index;}
+        int operator-(Iter const& o) { return index-o.index; }
+    };
+
+    AudioSession();
+    ~AudioSession();
+    void restart();
+    
+    // cfg modified in place
+    AudioStream open(AudioStream::Config & cfg);
+
+    Iter begin();
+    Iter end();
+
+    AudioDevice default_input();
+    AudioDevice default_output();
+};
 
 } // namespace audioplus

@@ -15,62 +15,76 @@ void throw_pm_error(int err)
 namespace audioplus {
 
 
-char const* MidiDevice::name() const
+static PmDeviceInfo const* get_info(int index)
 {
-    return Pm_GetDeviceInfo(index)->name;
+    PmDeviceInfo const* info = Pm_GetDeviceInfo(index);
+    if(!info) { throw std::runtime_error("device out of range"); }
+    return info;
+}
+
+std::string MidiDevice::name() const
+{
+    return get_info(index)->name;
 }
 bool MidiDevice::has_input() const
 {
-    return Pm_GetDeviceInfo(index)->input;
+    return get_info(index)->input;
 }
 bool MidiDevice::has_output() const
 {
-    return Pm_GetDeviceInfo(index)->output;
+    return get_info(index)->output;
 }
 
 
-MidiSystem::MidiSystem()
+MidiSession::MidiSession()
 {
     throw_pm_error( Pm_Initialize() );
 }
-MidiSystem::~MidiSystem()
+MidiSession::~MidiSession()
 {
     Pm_Terminate(); // errors in destructors are tricky
 }
-void MidiSystem::restart()
+void MidiSession::restart()
 {
     throw_pm_error( Pm_Terminate() );
     throw_pm_error( Pm_Initialize() );
 }
-MidiSystem::Iter MidiSystem::begin()
+MidiSession::Iter MidiSession::begin()
 {
     return {0};
 }
-MidiSystem::Iter MidiSystem::end()
+MidiSession::Iter MidiSession::end()
 {
     return {Pm_CountDevices()};
 }
-MidiDevice MidiSystem::default_input()
+MidiDevice MidiSession::default_input()
 {
     return {Pm_GetDefaultInputDeviceID()};
 }
-MidiDevice MidiSystem::default_output()
+MidiDevice MidiSession::default_output()
 {
     return {Pm_GetDefaultOutputDeviceID()};
 }
-
-
-MidiInputStream::MidiInputStream(MidiDevice device, int buffer_size)
+MidiInputStream MidiSession::open(MidiInputStream::Config & cfg)
 {
+    MidiInputStream out;
+
+    if(cfg.device.index < 0)
+        cfg.device.index = Pm_GetDefaultInputDeviceID();
+
     throw_pm_error( Pm_OpenInput(
-        &backend,
-        device.index,
+        &out.backend,
+        cfg.device.index,
         nullptr, // SysDepInfo
-        buffer_size,
-        nullptr, // TimeFunction
-        nullptr // TimeContext
+        cfg.buffer_size,
+        (PmTimeProcPtr)cfg.clock_time_fn,
+        cfg.clock_time_ctx
     ) );
+
+    return out;
 }
+
+
 MidiInputStream::MidiInputStream(MidiInputStream && o)
 {
     std::swap(backend, o.backend);
@@ -81,15 +95,19 @@ MidiInputStream & MidiInputStream::operator=(MidiInputStream && o)
     return *this;
 }
 
-MidiInputStream::~MidiInputStream()
+bool MidiInputStream::is_open() const
 {
-    if(backend) { Pm_Close(backend); }
+    return backend;
 }
-
 void MidiInputStream::close()
 {
-    if(!backend) { return; }
-    throw_pm_error( Pm_Close(backend) );
+    throw_pm_error( close(std::nothrow_t{}) );
+}
+int MidiInputStream::close(std::nothrow_t)
+{
+    int stat = backend ? Pm_Close(backend) : 0;
+    backend = nullptr;
+    return stat;
 }
 
 int MidiInputStream::read(MidiMsg * buf, int buf_size)
