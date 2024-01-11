@@ -8,6 +8,7 @@ if(NOT DEFINED dr_libs_SOURCE_DIR)
         dr_libs
         GIT_REPOSITORY https://github.com/mackron/dr_libs.git
         GIT_TAG        a4b73d3d423e1cea0652b76d0806e7620337a40f # 2023 Dec 1
+        GIT_SUBMODULES "" # skip broken submodule links
     )
     FetchContent_Populate(dr_libs)
 endif()
