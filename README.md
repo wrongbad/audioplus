@@ -105,11 +105,12 @@ struct MyAudio
         midi_stream = midi_session.open(midi_config);
     }
 
-    void on_audio(float const* input, int16_t output, int frames)
+    int on_audio(float const* input, int16_t * output, int frames)
     {
         MidiMsg msg[16];
         int count = midi_stream.read(msg, 16);
         // handle messages, process audio
+        return 0; // no error
     }
 };
 ```

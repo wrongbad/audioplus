@@ -1,5 +1,12 @@
 
+project(audioplus)
+
 include(FetchContent)
+
+if(PROJECT_IS_TOP_LEVEL)
+    set(CMAKE_CXX_STANDARD 17)
+endif()
+
 
 # if you define dr_libs_SOURCE_DIR ahead of time
 # this download step will be skipped
@@ -36,17 +43,20 @@ if(NOT ${portmidi_FOUND})
 endif()
 
 
-add_library(audioplus_wav EXCLUDE_FROM_ALL src/wav.cpp)
+  
+
+
+add_library(audioplus_wav src/wav.cpp)
 target_include_directories(
     audioplus_wav
     PUBLIC include
     PRIVATE ${dr_libs_SOURCE_DIR}
 )
 
-add_library(audioplus_audio EXCLUDE_FROM_ALL src/audio.cpp)
+add_library(audioplus_audio src/audio.cpp)
 target_include_directories(audioplus_audio PUBLIC include)
 target_link_libraries(audioplus_audio PRIVATE portaudio)
 
-add_library(audioplus_midi EXCLUDE_FROM_ALL src/midi.cpp)
+add_library(audioplus_midi src/midi.cpp)
 target_include_directories(audioplus_midi PUBLIC include)
 target_link_libraries(audioplus_midi PRIVATE portmidi)

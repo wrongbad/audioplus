@@ -2,12 +2,14 @@
 
 #include "portaudio.h"
 #include <stdexcept>
+#include <iostream>
 
 namespace {
 
 void throw_pa_error(int err)
 {
     if(!err) { return; }
+    std::cerr << "err = " << Pa_GetErrorText(err) << std::endl;
     throw std::runtime_error(Pa_GetErrorText(err));
 }
 
@@ -109,7 +111,7 @@ AudioStream AudioSession::open(AudioStream::Config & cfg)
     in_params.hostApiSpecificStreamInfo = nullptr;
 
     PaStreamParameters out_params;
-    in_params.device = cfg.output_device.index;
+    out_params.device = cfg.output_device.index;
     out_params.channelCount = cfg.output_channels;
     out_params.sampleFormat = cfg.output_dtype;
     out_params.suggestedLatency = 0;
