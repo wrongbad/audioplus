@@ -184,16 +184,19 @@ double AudioStream::clock_time()
     return backend ? Pa_GetStreamTime(backend) : 0;
 }
 
-AudioStream::Status::Status(PaStreamCallbackTimeInfo const* pa_time, unsigned long pa_flags)
+AudioStream::Status::Status(
+    PaStreamCallbackTimeInfo const* pa_time, 
+    unsigned long pa_flags
+)
+:   input_hw_time(pa_time->inputBufferAdcTime),
+    callback_time(pa_time->currentTime),
+    output_hw_time(pa_time->outputBufferDacTime),
+    input_underflow(pa_flags & paInputUnderflow),
+    input_overflow(pa_flags & paInputOverflow),
+    output_underflow(pa_flags & paOutputUnderflow),
+    output_overflow(pa_flags & paOutputOverflow),
+    priming_output(pa_flags & paPrimingOutput)
 {
-    input_hw_time = pa_time->inputBufferAdcTime;
-    callback_time = pa_time->currentTime;
-    output_hw_time = pa_time->outputBufferDacTime;
-    input_underflow = (pa_flags & paInputUnderflow);
-    input_overflow = (pa_flags & paInputOverflow);
-    output_underflow = (pa_flags & paOutputUnderflow);
-    output_overflow = (pa_flags & paOutputOverflow);
-    priming_output = (pa_flags & paPrimingOutput);
 }
 
 } // namespace audiopluss

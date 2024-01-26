@@ -40,10 +40,7 @@ if(NOT ${portmidi_FOUND})
         GIT_TAG        v2.0.4 # 2022 Oct 7
     )
     FetchContent_MakeAvailable(portmidi)
-endif()
-
-
-  
+endif()  
 
 
 add_library(audioplus_wav src/wav.cpp)
