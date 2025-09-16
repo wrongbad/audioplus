@@ -67,7 +67,7 @@ struct AudioStream
 
       private:
         template<class Obj, class T1, class T2>
-        void on_audio(Obj * obj, int(Obj::*fn)(T1 const*, T2*, int, Status const&))
+        void on_audio(Obj * obj, int(Obj::*)(T1 const*, T2*, int, Status const&))
         {
             on_audio_ctx = obj;
             on_audio_fn = (void *) +[] (
@@ -84,14 +84,14 @@ struct AudioStream
             output_dtype = get_audio_dtype<T2>();
         }
         template<class Obj, class T1, class T2>
-        void on_audio(Obj * obj, int(Obj::*fn)(T1 const*, T2*, int))
+        void on_audio(Obj * obj, int(Obj::*)(T1 const*, T2*, int))
         {
             on_audio_ctx = obj;
             on_audio_fn = (void *) +[] (
                 void const* i, void * o,
                 unsigned long n,
-                PaStreamCallbackTimeInfo const* time,
-                unsigned long pa_status,
+                PaStreamCallbackTimeInfo const* /*time*/,
+                unsigned long /*pa_status*/,
                 void * pa_ctx)
             {
                 return ((Obj *)pa_ctx)->on_audio((T1 const*)i, (T2 *)o, n);
