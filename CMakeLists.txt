@@ -21,8 +21,9 @@ if(NOT DEFINED dr_libs_SOURCE_DIR)
 endif()
 
 
-find_package(portaudio)
+find_package(portaudio QUIET)
 if(NOT ${portaudio_FOUND})
+    message(STATUS "PortAudio not found. Installing PortAudio from source.")
     FetchContent_Declare(
         portaudio
         GIT_REPOSITORY https://github.com/PortAudio/portaudio.git
@@ -32,15 +33,16 @@ if(NOT ${portaudio_FOUND})
 endif()
 
 
-find_package(portmidi)
+find_package(portmidi QUIET)
 if(NOT ${portmidi_FOUND})
+    message(STATUS "PortMidi not found. Installing PortMidi from source.")
     FetchContent_Declare(
         portmidi
         GIT_REPOSITORY https://github.com/PortMidi/portmidi.git
         GIT_TAG        v2.0.4 # 2022 Oct 7
     )
     FetchContent_MakeAvailable(portmidi)
-endif()  
+endif()
 
 
 add_library(audioplus_wav src/wav.cpp)
@@ -57,3 +59,9 @@ target_link_libraries(audioplus_audio PRIVATE portaudio)
 add_library(audioplus_midi src/midi.cpp)
 target_include_directories(audioplus_midi PUBLIC include)
 target_link_libraries(audioplus_midi PRIVATE portmidi)
+
+add_library(audioplus ALIAS)
+target_link_libraries(
+    audioplus
+    INTERFACE audioplus_midi audioplus_audio audioplus_wav
+)
